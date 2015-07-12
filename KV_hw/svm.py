@@ -91,10 +91,10 @@ def smooth_qp_dual_solver(X_train, y_train,
     lambdas[lambdas < Eps] = 0.0
     #write results
     ret_dic = {
-    'lambdas': lambdas,
     'a': np.sum(lambdas.T*y.T*np.dot(B_inv, X.T), axis=1).reshape(-1, 1),
     'b': -((np.sum(np.dot(a.T, (lambdas*X).T)) + C*np.sum(y[np.abs(lambdas - C) < Eps])) /
             np.sum(lambdas[np.abs(lambdas - C) >= Eps])),###???
+    'lambdas': lambdas,
     'dual': -sol['primal objective'],
     'status': (2 * (sol['iterations'] == max_iter) + 
                             1 * (sol['iterations'] != max_iter and
@@ -104,10 +104,10 @@ def smooth_qp_dual_solver(X_train, y_train,
 
 
 def smooth_qp_primal_real_solver(X, y, fines=np.array([0, 0, 0]), gamma=1,
-            C=0.1, alpha=0, tol=1e-6, max_iter=10**6, verbose=False):
+    alpha=0, C=0.1, tol=1e-6, max_iter=10**6, verbose=False):
     """Функции для решения задачи SVM на реальных данных:
         svm_qp_primal_real_solver(X, y, fines=np.array([0, 0, 0]),
-            C=0.1, alpha=0, tol=1e-6, max_iter=10**6, verbose=False)
+            alpha=0, C=0.1, tol=1e-6, max_iter=10**6, verbose=False)
     Описание параметров:
         • (!!!) X — переменная типа numpy.ma (masked array), uncomressed!,
             матрица размера N × max_D, признаковые описания объектов обучающей выборки, 
@@ -172,6 +172,7 @@ def smooth_qp_primal_real_solver(X, y, fines=np.array([0, 0, 0]), gamma=1,
     ret_dic = {
     'a': np.array(sol['x'][:D]).reshape(-1, 1),
     #w /= np.sum(w * w, axis=0) ** (1 / 2)  # normalize?
+    'b': 0,
     'ksi': np.array(sol['x'][D:]).reshape(-1, 1),
     'primal': sol['primal objective'],
     'status': (2 * (sol['iterations'] == max_iter) + 
@@ -180,8 +181,16 @@ def smooth_qp_primal_real_solver(X, y, fines=np.array([0, 0, 0]), gamma=1,
     'time': time.time() - tm_all}
     return ret_dic
 
-def predict(data_type, problem_type, a, b=0):
-    if True: pass
-        if True: pass
+def predict(X_test, data_type, problem_type, a, b=0,
+    X_train=None, y_train=None, fines=np.array([0, 0, 0])):
+    dt = data_type
+    pt = problem_type
+    if dt == 'real':
+        if pt == 'primal':
+            import sigproc
+            R = -y_train.T*sigproc.m_distance_features(X_test, fines, X_train)
+            y_pred = np.sign(np.sum(R*a.T, axis=1)).reshape(-1, 1)
         else: pass
     else: pass
+    
+    return y_pred
