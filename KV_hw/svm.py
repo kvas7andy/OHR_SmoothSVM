@@ -110,7 +110,7 @@ def smooth_qp_primal_real_solver(X, y, fines=np.array([0, 0, 0]), gamma=1,
             alpha=0, C=0.1, tol=1e-6, max_iter=10**6, verbose=False)
     Описание параметров:
         • (!!!) X — переменная типа numpy.ma (masked array), uncomressed!,
-            матрица размера N × max_D, признаковые описания объектов обучающей выборки, 
+            матрица размера N × 2 x max_D, признаковые описания объектов обучающей выборки, 
         • y — переменная типа numpy.array, матрица размера N × 1,
             правильные ответы на обучающей выборке,
         • fines — переменная типа numpy.array, матрица размера 3,
@@ -182,7 +182,7 @@ def smooth_qp_primal_real_solver(X, y, fines=np.array([0, 0, 0]), gamma=1,
     return ret_dic
 
 def predict(X_test, data_type, problem_type, a, b=0,
-    X_train=None, y_train=None, fines=np.array([0, 0, 0])):
+    X_train=None, y_train=None, fines=np.array([0, 0, 0]), multi_solver=False):
     dt = data_type
     pt = problem_type
     if dt == 'real':
@@ -192,5 +192,36 @@ def predict(X_test, data_type, problem_type, a, b=0,
             y_pred = np.sign(np.sum(R*a.T, axis=1)).reshape(-1, 1)
         else: pass
     else: pass
-    
+
     return y_pred
+
+
+def multi_solver(X, y, data_type, problem_type, **kwargs):
+    """
+    Возвращет:
+        a_list - numpy.array,  из значений N весов (a - вектор, размера количества объектов)
+            и нулевы значений
+    """
+    dt = data_type
+    pt = problem_type
+    if dt == 'real':
+        if pt == 'primal':
+            a_list = []
+            for y_cl in np.unique(y):
+                ?????????res = smooth_qp_primal_real_solver(X, y, **kwargs)
+                ????????a_list += [[res['a'], res['b']]
+        else: pass
+    else: pass
+    return np.array(a_list)
+
+def multi_predict(X_test, data_type, problem_type, a_list,**kwargs):
+    dt = data_type
+    pt = problem_type
+    if dt == 'real':
+        if pt == 'primal':
+            import sigproc
+            R = -y_train.T*sigproc.m_distance_features(X_test, fines, X_train)
+            y_pred = np.argmax(R.dot(a_list[:, :-1]))
+        else: pass
+    else: pass
+
