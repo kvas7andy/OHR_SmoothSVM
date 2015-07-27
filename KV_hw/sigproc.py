@@ -92,16 +92,18 @@ def dtw(a, b, do_path=False, fines=np.array([0, 1, 1]), metric='euclidean'):
     #make D[i,j] - optimal distance between a1,...,ai and b1,...,bj time series
     for i in range(1, M+1):
         for j in range(1, N+1):
-            dmin = np.min(np.array([D[i-1, j-1], D[i-1, j], D[i, j-1]]) +
-                            fines)
+            dmin = min([D[i-1, j-1] + fines[0],
+                        D[i-1, j] + fines[1],
+                        D[i, j-1] + fines[2]])
             D[i, j] += dmin
 
     if do_path:
     #Traceback from end 
         path = [[M, N]]
+        i, j = M, N
         while i > 0 and j > 0:
             min_ind = np.argmin(np.array([D[i-1, j-1], D[i-1, j], D[i, j-1]]) +
-                                fines)
+                                fines)### n_optimal
             i = i - (min_ind != 2)
             j = j - (min_ind != 1)
             path = [[i, j]] + path

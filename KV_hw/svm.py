@@ -182,7 +182,7 @@ def smooth_qp_primal_real_solver(X, y, fines=np.array([0, 0, 0]), gamma=1,
     return ret_dic
 
 def predict(X_test, data_type, problem_type, a, b=0,
-    X_train=None, y_train=None, fines=np.array([0, 0, 0]), multi_solver=False):
+    X_train=None, y_train=None, fines=np.array([0, 0, 0])):
     dt = data_type
     pt = problem_type
     if dt == 'real':
@@ -208,20 +208,27 @@ def multi_solver(X, y, data_type, problem_type, **kwargs):
         if pt == 'primal':
             a_list = []
             for y_cl in np.unique(y):
-                ?????????res = smooth_qp_primal_real_solver(X, y, **kwargs)
-                ????????a_list += [[res['a'], res['b']]
+                y_bin = -1*np.ones(y.shape)
+                y_bin[y == y_cl] = 1
+                res = smooth_qp_primal_real_solver(X, y_bin, **kwargs)
+                a_list += [[res['a'], res['b']]]
+            return np.array(a_list).T
         else: pass
     else: pass
-    return np.array(a_list)
 
-def multi_predict(X_test, data_type, problem_type, a_list,**kwargs):
+def multi_predict(X_test, data_type, problem_type, **kwargs):
     dt = data_type
     pt = problem_type
     if dt == 'real':
         if pt == 'primal':
+            X_train = kwargs['X_train']
+            y_train = kwargs['y_train']
+            fines = kwargs['fines']
+            a_list = kwargs['a_list']
             import sigproc
             R = -y_train.T*sigproc.m_distance_features(X_test, fines, X_train)
-            y_pred = np.argmax(R.dot(a_list[:, :-1]))
+            y_pred = np.unique(y_train)[np.argmax(R.dot(a_list[:-1]), axis=1)]
+            return y_pred
         else: pass
     else: pass
 
