@@ -3,7 +3,7 @@ function [res, path, D] = dtw_sign(X, algoptions)
 % algoptions.penalty - penalty for stretching
 % res - dissimilarity of two signals 
 % path - table of pairwise correspondences of two signals 
-% (optimal alignment)
+% (optimal alignment
 % D - alignment matrix
 
 pnt = algoptions.penalty;

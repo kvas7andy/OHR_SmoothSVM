@@ -104,7 +104,7 @@ def smooth_qp_dual_solver(X_train, y_train,
 
 
 def smooth_qp_primal_real_solver(X, y, fines=np.array([0, 0, 0]), gamma=1,
-    alpha=0, C=0.1, tol=1e-6, max_iter=10**6, verbose=False):
+    alpha=0, C=0.1, tol=1e-6, max_iter=10**6, verbose=False, B=None, d=None):
     """Функции для решения задачи SVM на реальных данных:
         svm_qp_primal_real_solver(X, y, fines=np.array([0, 0, 0]),
             alpha=0, C=0.1, tol=1e-6, max_iter=10**6, verbose=False)
@@ -138,9 +138,10 @@ def smooth_qp_primal_real_solver(X, y, fines=np.array([0, 0, 0]), gamma=1,
     """
     import sigproc
     tm_all = time.time()
-    B = sigproc.m_distance_features(X, fines=fines) #matrix of distances (DTW)
+    if B is None:
+        B = sigproc.m_distance_features(X, fines=fines, d=d) #matrix of distances (DTW)
     if verbose:
-        print("Time elapsed [DTW]: ", time.time() - tm_all)
+        print("Time elapsed [DTW]: ", time.time() - tm_all, flush=True)
         tm = time.time()
     X_n = -B*y.T
     # prepare qp matrixes:
@@ -165,7 +166,7 @@ def smooth_qp_primal_real_solver(X, y, fines=np.array([0, 0, 0]), gamma=1,
     solvers.options['reltol'] = tol
     solvers.options['show_progress'] = verbose
     if verbose:
-        print("Time elapsed [Cone QP preparation]: ", time.time() - tm)
+        print("Time elapsed [Cone QP preparation]: ", time.time() - tm, flush=True)
         tm = time.time()
     sol = solvers.qp(P, q, G, h)
 
@@ -225,8 +226,9 @@ def multi_predict(X_test, data_type, problem_type, **kwargs):
             y_train = kwargs['y_train']
             fines = kwargs['fines']
             a_list = kwargs['a_list']
+            d = kwargs['d']
             import sigproc
-            R = -y_train.T*sigproc.m_distance_features(X_test, fines, X_train)
+            R = -y_train.T*sigproc.m_distance_features(X_test, fines, X_train, d=d)
             y_pred = np.unique(y_train)[np.argmax(R.dot(a_list[:-1]), axis=1)]
             return y_pred
         else: pass

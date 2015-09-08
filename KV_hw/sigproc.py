@@ -1,6 +1,80 @@
 import numpy as np
 import svm
 
+def dtw(a, b, do_path=False, fines=np.array([0, 0, 0]),
+        metric='euclidean', d=None):
+    """
+    Проводим трасформацию пары сигналов.
+    Описание параметров:
+        a, b - numpy.array, пара сигналов, вектор столбец Mx2 и Nx2;
+        do_path - boolean, найти и вывести путь;
+        fines - numpy.array, штраф за совпадение ai, bj,
+                              за растяжение по i (bj фиксир),
+                              за сжатие по i (ai фиксир);
+        metric - метрика сходства (при 0 значении) между векторами измерений;
+
+    Возвращается кортеж значений:
+        res - double, вычисленное значение несходства; 
+        Если do_path==True:
+            path - numpy.array, таблица парных соответствий,
+                                        Kx2, max(m, n) <= K <= m+n;
+        D - numpy.array,
+            матрица наименьших расстояний до сигналов a,b с концами в (i, j), MxN;
+    """
+
+    M, N = a.shape[0], b.shape[0]; D = np.zeros((M+1, N+1))
+    D[0,:] = np.inf; D[:,0] = np.inf; D[0, 0] = 0
+
+    #distance matrix inside D[1:, 1:]
+    if metric=='euclidean':
+        D[1:, 1:] = (np.sum(a**2, axis=1)[:, np.newaxis] +
+                np.sum(b**2, axis=1)[np.newaxis, :] - 2*a.dot(b.T))**(1/2)
+
+    #make D[i,j] - optimal distance between a1,...,ai and b1,...,bj time series
+    if d is None:
+        d = M+N
+    for i in range(1, M+1):
+        for j in range(1, N+1):
+            if np.abs(i-j) > d: D[i, j] = np.inf; continue
+            dmin = np.min(np.array([D[i-1, j-1], D[i-1, j], D[i, j-1]]) +
+                          fines)
+            D[i, j] += dmin
+
+    if do_path:
+    #Traceback from end 
+        path = [[M, N]]; i, j = M, N
+        while i > 0 and j > 0:
+            min_ind = np.argmin(np.array([D[i-1, j-1], D[i-1, j], D[i, j-1]]) +
+                                fines)### n_optimal
+            i = i - (min_ind != 2)
+            j = j - (min_ind != 1)
+            path = [[i, j]] + path
+        if i > 0 or j > 0:
+            path = [[1, 1]] + path
+        path = np.array(path)
+
+    res = D[M, N]; D = D[1:, 1:]
+    return (res, path, D) if do_path else (res, D)
+
+def m_distance_features(X1, fines, X2=None, d=None):
+    if X2 is None: #DTW distance of X1 objects => N(N-1)/2
+        X = X1
+        R = np.zeros((X.shape[0], X.shape[0]), dtype=np.float64)
+        for i in range(X.shape[0]-1):
+            for j in range(i+1, X.shape[0]):
+                a = X[i].compressed().reshape(2, -1).T
+                b = X[j].compressed().reshape(2, -1).T
+                R[i][j] = dtw(a, b, do_path=False, fines=fines, d=d)[0]
+                R[j][i] = R[i][j]
+    else: #DTW distance of X1 to X2 objects => N*M
+        R = np.zeros((X1.shape[0], X2.shape[0]), dtype=np.float64)
+        for i in range(X1.shape[0]):
+            for j in range(X2.shape[0]):
+                a = X1[i].compressed().reshape(2, -1).T
+                b = X2[j].compressed().reshape(2, -1).T
+                R[i][j] = dtw(a, b, do_path=False, fines=fines, d=d)[0]
+    return R
+
 
 def hold_out_modelhw(dataX, datay, K, N_max,
     alpha, N_train,n_boarder='N_train', exper_iters=100):
@@ -56,84 +130,6 @@ def hold_out_modelhw(dataX, datay, K, N_max,
     #for i in range(K.size - 1):
     #    res[i, i+1:] = np.mean(res_sum[i], axis=-1)
     return res_sum#, par_sum
-
-
-def dtw(a, b, do_path=False, fines=np.array([0, 1, 1]), metric='euclidean'):
-    """
-    Проводим трасформацию пары сигналов.
-    Описание параметров:
-        a, b - numpy.array, пара сигналов, вектор столбец Mx2 и Nx2;
-        do_path - boolean, найти и вывести путь;
-        fines - numpy.array, штраф за совпадение ai, bj,
-                              за растяжение по i (bj фиксир),
-                              за сжатие по i (ai фиксир);
-        metric - метрика сходства (при 0 значении) между векторами измерений;
-
-    Возвращается кортеж значений:
-        res - double, вычисленное значение несходства; 
-        Если do_path==True:
-            path - numpy.array, таблица парных соответствий,
-                                        Kx2, max(m, n) <= K <= m+n;
-        D - numpy.array,
-            матрица наименьших расстояний до сигналов a,b с концами в (i, j), MxN;
-    """
-
-    M, N = a.shape[0], b.shape[0]
-    D = np.zeros((M+1, N+1))
-    D[0,:] = np.inf
-    D[:,0] = np.inf
-    D[0, 0] = 0
-
-    #distance matrix inside D[1:, 1:]
-    if metric=='euclidean':
-        D[1:, 1:] = (np.sum(a**2, axis=1)[:, np.newaxis] +
-                np.sum(b**2, axis=1)[np.newaxis, :] - 2*a.dot(b.T))**(1/2)
-
-    #make D[i,j] - optimal distance between a1,...,ai and b1,...,bj time series
-    for i in range(1, M+1):
-        for j in range(1, N+1):
-            dmin = min([D[i-1, j-1] + fines[0],
-                        D[i-1, j] + fines[1],
-                        D[i, j-1] + fines[2]])
-            D[i, j] += dmin
-
-    if do_path:
-    #Traceback from end 
-        path = [[M, N]]
-        i, j = M, N
-        while i > 0 and j > 0:
-            min_ind = np.argmin(np.array([D[i-1, j-1], D[i-1, j], D[i, j-1]]) +
-                                fines)### n_optimal
-            i = i - (min_ind != 2)
-            j = j - (min_ind != 1)
-            path = [[i, j]] + path
-        if i > 0 or j > 0:
-            path = [[1, 1]] + path
-        path = np.array(path)
-
-    res = D[M, N]
-    D = D[1:, 1:]
-    return (res, path, D) if do_path else (res, D)
-
-def m_distance_features(X1, fines, X2=None):
-    if X2 is None: #DTW distance of X1 objects => N(N-1)/2
-        X = X1
-        R = np.zeros((X.shape[0], X.shape[0]), dtype=np.float64)
-        for i in range(X.shape[0]-1):
-            for j in range(i+1, X.shape[0]):
-                a = X[i].compressed().reshape(2, -1).T
-                b = X[j].compressed().reshape(2, -1).T
-                R[i][j] = dtw(a, b, do_path=False, fines=fines)[0]
-                R[j][i] = R[i][j]
-    else: #DTW distance of X1 to X2 objects => N*M
-        R = np.zeros((X1.shape[0], X2.shape[0]), dtype=np.float64)
-        for i in range(X1.shape[0]):
-            for j in range(X2.shape[0]):
-                a = X1[i].compressed().reshape(2, -1).T
-                b = X2[j].compressed().reshape(2, -1).T
-                R[i][j] = dtw(a, b, do_path=False, fines=fines)[0]
-    return R
-
 
 #a way of getting general pathed symbol
 if __name__ == '__main__':
