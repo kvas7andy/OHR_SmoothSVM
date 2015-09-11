@@ -183,13 +183,13 @@ def smooth_qp_primal_real_solver(X, y, fines=np.array([0, 0, 0]), gamma=1,
     return ret_dic
 
 def predict(X_test, data_type, problem_type, a, b=0,
-    X_train=None, y_train=None, fines=np.array([0, 0, 0])):
+    X_train=None, y_train=None, fines=np.array([0, 0, 0]), d=None):
     dt = data_type
     pt = problem_type
     if dt == 'real':
         if pt == 'primal':
             import sigproc
-            R = -y_train.T*sigproc.m_distance_features(X_test, fines, X_train)
+            R = -y_train.T*sigproc.m_distance_features(X_test, fines, X_train, d=None)
             y_pred = np.sign(np.sum(R*a.T, axis=1)).reshape(-1, 1)
         else: pass
     else: pass
