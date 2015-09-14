@@ -2,7 +2,7 @@ import numpy as np
 import svm
 
 def dtw(a, b, do_path=False, fines=np.array([0, 0, 0]),
-        metric='euclidean', d=None):
+        metric='euclidean', d=None, ver=2):
     """
     Проводим трасформацию пары сигналов.
     Описание параметров:
@@ -33,12 +33,23 @@ def dtw(a, b, do_path=False, fines=np.array([0, 0, 0]),
     #make D[i,j] - optimal distance between a1,...,ai and b1,...,bj time series
     if d is None:
         d = M+N
+    sum_fines = 0
+
     for i in range(1, M+1):
         for j in range(1, N+1):
             if np.abs(i-j) > d: D[i, j] = np.inf; continue
-            dmin = np.min(np.array([D[i-1, j-1], D[i-1, j], D[i, j-1]]) +
-                          fines)
-            D[i, j] += dmin
+            if ver != 2:
+                tmp_arr = np.array([D[i-1, j-1], D[i-1, j], D[i, j-1]]) + fines
+                dmin = np.min(tmp_arr)
+                D[i, j] += dmin
+                if ver == 3:
+                    ind = np.argmin(tmp_arr)
+                    sum_fines += fines[ind]
+            else:
+                dmin = np.min(np.array([D[i-1, j-1], D[i-1, j], D[i, j-1]]) +
+                              fines*np.array([D[i, j], D[i, j], D[i, j]]))
+                D[i, j] = dmin
+            
 
     if do_path:
     #Traceback from end 
@@ -53,10 +64,17 @@ def dtw(a, b, do_path=False, fines=np.array([0, 0, 0]),
             path = [[1, 1]] + path
         path = np.array(path)
 
-    res = D[M, N]; D = D[1:, 1:]
+    if ver != 2:
+        if ver != 3 or sum_fines == 0:
+            res = D[M, N]
+        else:
+            res = D[M, N] / sum_fines - 1;
+    else:
+        res = D[M, N]/(M+N)
+    D = D[1:, 1:]
     return (res, path, D) if do_path else (res, D)
 
-def m_distance_features(X1, fines, X2=None, d=None):
+def m_distance_features(X1, fines, X2=None, d=None, ver=1):
     if X2 is None: #DTW distance of X1 objects => N(N-1)/2
         X = X1
         R = np.zeros((X.shape[0], X.shape[0]), dtype=np.float64)
@@ -64,7 +82,7 @@ def m_distance_features(X1, fines, X2=None, d=None):
             for j in range(i+1, X.shape[0]):
                 a = X[i].compressed().reshape(2, -1).T
                 b = X[j].compressed().reshape(2, -1).T
-                R[i][j] = dtw(a, b, do_path=False, fines=fines, d=d)[0]
+                R[i][j] = dtw(a, b, do_path=False, fines=fines, d=d, ver=ver)[0]
                 R[j][i] = R[i][j]
     else: #DTW distance of X1 to X2 objects => N*M
         R = np.zeros((X1.shape[0], X2.shape[0]), dtype=np.float64)
@@ -72,7 +90,7 @@ def m_distance_features(X1, fines, X2=None, d=None):
             for j in range(X2.shape[0]):
                 a = X1[i].compressed().reshape(2, -1).T
                 b = X2[j].compressed().reshape(2, -1).T
-                R[i][j] = dtw(a, b, do_path=False, fines=fines, d=d)[0]
+                R[i][j] = dtw(a, b, do_path=False, fines=fines, d=d, ver=ver)[0]
     return R
 
 
