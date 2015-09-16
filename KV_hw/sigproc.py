@@ -1,8 +1,10 @@
 import numpy as np
 import svm
+from ipyparallel import interactive
 
+@interactive
 def dtw(a, b, do_path=False, fines=np.array([0, 0, 0]),
-        metric='euclidean', d=None, ver=2):
+        metric='euclidean', d=None, ver=1):
     """
     Проводим трасформацию пары сигналов.
     Описание параметров:
@@ -74,6 +76,7 @@ def dtw(a, b, do_path=False, fines=np.array([0, 0, 0]),
     D = D[1:, 1:]
     return (res, path, D) if do_path else (res, D)
 
+@interactive
 def m_distance_features(X1, fines, X2=None, d=None, ver=1):
     if X2 is None: #DTW distance of X1 objects => N(N-1)/2
         X = X1

@@ -45,7 +45,7 @@ def transform_set(dataset, frame=frame_size, ratio=UJI_ratio, angle=50):
     return ma.masked_array(new_data, mask=dataset.mask)
 
 def vis_letters(letter_index, real_data,frame=frame_size, ratio=UJI_ratio,
-                vert_lines=np.array([7.5,12.7]), figsize=frame_size/2, verbose=True):
+                vert_lines=np.array([7.5,12.7]), figsize=frame_size/2, verbose=False):
     points_xy = real_data[letter_index].compressed().reshape(2, -1)
     fig = plt.figure(figsize=figsize)
     ax = fig.gca()
@@ -70,8 +70,8 @@ def vis_letters(letter_index, real_data,frame=frame_size, ratio=UJI_ratio,
     ax.invert_yaxis()
     ax.grid()
 
-def vis_letters3(letter_index, real_data,frame=frame_size, ratio=UJI_ratio,
-                 vert_lines=np.array([7.5,12.7]), figsize=frame_size/2,verbose=True):
+def vis_letters_trans(letter_index, real_data,frame=frame_size, ratio=UJI_ratio,
+                 vert_lines=np.array([7.5,12.7]), figsize=frame_size/2,verbose=False):
     points_xy = real_data[letter_index].compressed().reshape(2, -1)
     fig = plt.figure(figsize=figsize)
     ax = fig.gca()
