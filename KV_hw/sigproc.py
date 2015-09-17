@@ -181,7 +181,7 @@ def dtw_based(a, b, fines=np.array([5, 1, 1]), angles=None,
     return (K, ang_s, T) 
 
 #@interactive
-def m_distance_features_based(X1, fines, X2=None, d=None, ver=1, based=False):
+def m_distance_features_based(X1, fines, X2=None, d=None, ver=1):
     Angles1 = X1[..., 1:] - X1[..., :-1] #(vectors)
     AnglesX = Angles1[:, 0, :].copy()
     AnglesY = Angles1[:, 1, :].copy()
