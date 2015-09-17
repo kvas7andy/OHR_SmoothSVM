@@ -145,14 +145,15 @@ def smooth_qp_primal_real_solver(X, y, fines=np.array([0, 0, 0]), gamma=1,
     if verbose:
         print("Time elapsed [DTW]: ", time.time() - tm_all, flush=True)
         tm = time.time()
-    X_n = -B*y.T
+    X_n = -B*y.reshape(-1)[np.newaxis, :]
     # prepare qp matrixes:
     N = X_n.shape[0]
     D = N
     """P is a square dense or sparse real matrix, representing a positive semidefinite symmetric matrix in 'L' storage,
     i.e., only the lower triangular part of P is referenced. q is a real single-column dense matrix.
     The arguments h and b are real single-column dense matrices. G and A are real dense or sparse matrices. """
-    B = (B + 1)**(-gamma)
+    B = (B + 10**(-15))**(-gamma)
+    B[np.arange(N), np.arange(N)] = 0 
     B = np.eye(D) + alpha*(-B + np.eye(D)*np.sum(B, axis=1))# D==N
     P = spdiag([matrix(B), spmatrix([], [], [], (N, N))])
     q = matrix(0.0, (D + N, 1))# D==N
@@ -160,8 +161,8 @@ def smooth_qp_primal_real_solver(X, y, fines=np.array([0, 0, 0]), gamma=1,
 
     I = spmatrix(1, range(N), range(N))
     O = spmatrix([], [], [], (N, D))
-    G = sparse([[-matrix(y*X_n), O, -I], [-I, -I, O]])
-    h = matrix(0., (N+N+N, 1))
+    G = sparse([[-matrix(y.reshape(-1)[:, np.newaxis]*X_n), O, -I], [-I, -I, O]])
+    h = matrix(0., (3*N, 1))
     h[:N] = -1
 
     solvers.options['maxiters'] = max_iter
@@ -195,8 +196,8 @@ def predict(X_test, data_type, problem_type, a, b=0,
                 B = Dist
             else:
                 B = sigproc.m_distance_features(X_test, fines, X_train, d=None)
-            R = -y_train.T*B
-            y_pred = np.sign(np.sum(R*a.T, axis=1)).reshape(-1, 1)
+            X = -y_train.reshape(-1)[np.newaxis, :]*B
+            y_pred = np.sign(np.sum(X*a.reshape(-1)[np.newaxis, :], axis=1)).reshape(-1, 1)
         else: pass
     else: pass
 
@@ -217,10 +218,13 @@ def multi_solver(X, y, data_type, problem_type, **kwargs):
             y_uniq = np.unique(y)
             if mode == 'ovo':
                 for y_i in range(y_uniq.size):
-                    for y_iplus in range(y_i+1, y_uniq.size): 
-                        y_bin = -1*np.ones(y.shape)
-                        y_bin[y == y_cl] = 1
-                        res = smooth_qp_primal_real_solver(X, y_bin, **kwargs)
+                    for y_iplus in range(y_i+1, y_uniq.size):
+                        ind1 = np.where(y==y_i)
+                        ind2 = np.where(y==i_iplus)
+                        y_bin = np.ones(ind1[0].size + ind2[0].size)
+                        y_bin[ind1[0].size:] = -1
+                        X_tmp = X[np.append(ind1[0], ind2[0])]
+                        res = smooth_qp_primal_real_solver(X_tmp, y_bin, **kwargs)
                         a_list += [[res['a'], res['b']]]
             return np.array(a_list).T
         else: pass

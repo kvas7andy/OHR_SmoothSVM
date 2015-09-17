@@ -7,6 +7,7 @@ keys = np.array(["0", "o", "O", "1", "2", "3", "4", "5", "6", "7", "8", "9",
         "n", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
         "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
         "N", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"])
+keys_low_letters = np.array(list(keys[12:12+26]) + ['o'])
 values = np.array(list(range(len(keys))))
 y_values = np.array([0, 0, 0] + list(range(1, 10)) + list(range(10, 10 + 25)) + list(range(10, 10 + 25)))
 lexicon = dict(zip(keys, values))
@@ -14,7 +15,7 @@ anti_lexicon = dict(zip(values, keys))
 frame_size = np.array([13.6, 20.4]) 
 UJI_ratio, UPV_ratio = 100, 152
 max_d = 392
-N_wr=11
+N_wr = 11
 
 def transform_set(dataset, frame=frame_size, ratio=UJI_ratio, angle=50):
     new_data = dataset.copy()
@@ -98,6 +99,29 @@ def vis_letters_trans(letter_index, real_data,frame=frame_size, ratio=UJI_ratio,
                     fontsize=figsize[1]*2, y=1.03)
     ax.invert_yaxis()
     ax.grid()
+
+def dist_vis(Dist, name='colorMap', extra_values=keys):
+    fig = plt.figure(figsize=(15, 8))
+    if extra_values is not None:
+        sym_num = extra_values.size
+    ax = fig.add_subplot(111)
+    ax.set_title(name)
+    plt.imshow(Dist, interpolation='none')
+    ax.set_aspect('equal')
+    if extra_values is not None:
+        ax.set_yticks(np.arange(sym_num))
+        ax.set_yticklabels(list(extra_values), rotation=90, fontsize=10)
+        ax.set_xticks(np.arange(sym_num))
+        ax.set_xticklabels(list(extra_values), rotation=0, fontsize=10)
+    ax.xaxis.grid(), ax.yaxis.grid()
+    
+    cax = fig.add_axes([0.12, 0.1, 0.78, 0.8])
+    cax.get_xaxis().set_visible(False)
+    cax.get_yaxis().set_visible(False)
+    cax.patch.set_alpha(0)
+    cax.set_frame_on(False)
+    plt.colorbar(orientation='vertical')
+    plt.show()
 
 #new_real_data = transform_set(real_data)
 #new2_real_data = ma.empty_like(new_real_data)
