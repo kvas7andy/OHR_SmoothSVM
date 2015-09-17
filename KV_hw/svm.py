@@ -214,14 +214,18 @@ def multi_solver(X, y, data_type, problem_type, **kwargs):
     if dt == 'real':
         if pt == 'primal':
             a_list = []
-            for y_cl in np.unique(y):
-                y_bin = -1*np.ones(y.shape)
-                y_bin[y == y_cl] = 1
-                res = smooth_qp_primal_real_solver(X, y_bin, **kwargs)
-                a_list += [[res['a'], res['b']]]
+            y_uniq = np.unique(y)
+            if mode == 'ovo':
+                for y_i in range(y_uniq.size):
+                    for y_iplus in range(y_i+1, y_uniq.size): 
+                        y_bin = -1*np.ones(y.shape)
+                        y_bin[y == y_cl] = 1
+                        res = smooth_qp_primal_real_solver(X, y_bin, **kwargs)
+                        a_list += [[res['a'], res['b']]]
             return np.array(a_list).T
         else: pass
     else: pass
+
 
 def multi_predict(X_test, data_type, problem_type, **kwargs):
     dt = data_type
