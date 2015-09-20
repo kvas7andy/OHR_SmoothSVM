@@ -21,14 +21,17 @@ def printoptions(*args, **kwargs):
 import matplotlib as mpl
 from matplotlib import rc
 
-rc('figure', figsize=(10, 10)) 
-rc('font', **{'family':'serif', 'size':10})#45 
-rc('text', usetex=True) 
-rc('text.latex', unicode=True) 
-rc('text.latex', preamble=r'\usepackage[utf8]{inputenc}')
-rc('text.latex', preamble=r'\usepackage[russian]{babel}')
+rc('figure', figsize=(12, 6)) 
+from matplotlib import rc
+rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
+## for Palatino and other serif fonts use:
+#rc('font',**{'family':'serif','serif':['Palatino']})
+#rc('text', usetex=True) 
+#rc('text.latex', unicode=True) 
+#rc('text.latex', preamble=r'\usepackage[utf8]{inputenc}')
+#rc('text.latex', preamble=r'\usepackage[russian]{babel}')
 #rc('text.latex', preamble=r'\usepackage{amsmath}')
-
+rc('axes', labelsize=16, titlesize=20)
 rcParams = mpl.rcParams
 #font = {'family': 'sans-serif',
 #'weight': 'normal', 'size': 22}

@@ -7,9 +7,12 @@ keys = np.array(["0", "o", "O", "1", "2", "3", "4", "5", "6", "7", "8", "9",
         "n", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
         "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
         "N", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"])
-keys_low_letters = np.array(list(keys[12:12+26]) + ['o'])
+low_let_ind = np.append(np.array([1]), np.arange(12, 12+25))
+keys_low_letters = keys[low_let_ind]
 values = np.array(list(range(len(keys))))
 y_values = np.array([0, 0, 0] + list(range(1, 10)) + list(range(10, 10 + 25)) + list(range(10, 10 + 25)))
+y_3dim = np.tile(y_values,(2, 11, 1)).T
+y_low3dim = np.tile(low_let_ind, (2, 11, 1)).T
 lexicon = dict(zip(keys, values))
 anti_lexicon = dict(zip(values, keys))
 frame_size = np.array([13.6, 20.4]) 

@@ -140,6 +140,7 @@ def smooth_qp_primal_real_solver(X, y, fines=np.array([0, 0, 0]), gamma=1,
     tm_all = time.time()
     if Dist is None:
         B = sigproc.m_distance_features(X, fines=fines, d=d) #matrix of distances (DTW)
+        print("B = sigproc.mdistane... SMTH WRONG!!", flush=True)
     else:
         B = Dist.copy()
     if verbose:
@@ -152,7 +153,8 @@ def smooth_qp_primal_real_solver(X, y, fines=np.array([0, 0, 0]), gamma=1,
     """P is a square dense or sparse real matrix, representing a positive semidefinite symmetric matrix in 'L' storage,
     i.e., only the lower triangular part of P is referenced. q is a real single-column dense matrix.
     The arguments h and b are real single-column dense matrices. G and A are real dense or sparse matrices. """
-    B = (B + 10**(-15))**(-gamma)
+    B[B==0] += 10**(-15)
+    B = B**(-gamma)
     B[np.arange(N), np.arange(N)] = 0 
     B = np.eye(D) + alpha*(-B + np.eye(D)*np.sum(B, axis=1))# D==N
     P = spdiag([matrix(B), spmatrix([], [], [], (N, N))])
@@ -195,7 +197,7 @@ def predict(X_test, data_type, problem_type, a, b=0,
             if not (Dist is None):
                 B = Dist
             else:
-                B = sigproc.m_distance_features(X_test, fines, X_train, d=None)
+                B = sigproc.m_distance_features(X_test, fines, X_train, d=d)
             X = -y_train.reshape(-1)[np.newaxis, :]*B
             y_pred = np.sign(np.sum(X*a.reshape(-1)[np.newaxis, :], axis=1)).reshape(-1, 1)
         else: pass
@@ -204,7 +206,7 @@ def predict(X_test, data_type, problem_type, a, b=0,
     return y_pred
 
 
-def multi_solver(X, y, data_type, problem_type, **kwargs):
+def multi_solver(X, y, data_type, problem_type, mode, Dist, **kwargs):
     """
     Возвращет:
         a_list - numpy.array,  из значений N весов (a - вектор, размера количества объектов)
@@ -219,32 +221,52 @@ def multi_solver(X, y, data_type, problem_type, **kwargs):
             if mode == 'ovo':
                 for y_i in range(y_uniq.size):
                     for y_iplus in range(y_i+1, y_uniq.size):
-                        ind1 = np.where(y==y_i)
-                        ind2 = np.where(y==i_iplus)
+                        ind1 = np.where(y==y_uniq[y_i])
+                        ind2 = np.where(y==y_uniq[y_iplus])
                         y_bin = np.ones(ind1[0].size + ind2[0].size)
                         y_bin[ind1[0].size:] = -1
-                        X_tmp = X[np.append(ind1[0], ind2[0])]
-                        res = smooth_qp_primal_real_solver(X_tmp, y_bin, **kwargs)
+                        ind = np.append(ind1[0], ind2[0])
+                        #print(ind.shape)
+                        res = smooth_qp_primal_real_solver(X[ind], y_bin,
+                                            Dist=Dist[ind, :][:, ind],**kwargs)
                         a_list += [[res['a'], res['b']]]
-            return np.array(a_list).T
+            return a_list
         else: pass
     else: pass
 
 
-def multi_predict(X_test, data_type, problem_type, **kwargs):
+def multi_predict(X_test, model, data_type, problem_type, mode, Dist,
+                  X_train, y_train, **kwargs):
     dt = data_type
     pt = problem_type
     if dt == 'real':
         if pt == 'primal':
-            X_train = kwargs['X_train']
-            y_train = kwargs['y_train']
             fines = kwargs['fines']
-            a_list = kwargs['a_list']
             d = kwargs['d']
-            import sigproc
-            R = -y_train.T*sigproc.m_distance_features(X_test, fines, X_train, d=d)
-            y_pred = np.unique(y_train)[np.argmax(R.dot(a_list[:-1]), axis=1)]
-            return y_pred
+            y_uniq = np.unique(y_train)
+            if Dist is None:
+                import sigproc
+                print("SMTH WRONG!!!")
+                B = sigproc.m_distance_features(X_test, fines, X_train, d=d)
+            else:
+                B = Dist
+            if mode == 'ovo':
+                i_cl = 0
+                votes = np.zeros((X_test.shape[0], y_uniq.size), dtype=np.int32)
+                for y_i in range(y_uniq.size):
+                    for y_iplus in range(y_i+1, y_uniq.size):
+                        ind1 = np.where(y_train==y_uniq[y_i])
+                        ind2 = np.where(y_train==y_uniq[y_iplus])
+                        y_bin = np.ones(ind1[0].size + ind2[0].size)
+                        y_bin[ind1[0].size:] = -1
+                        ind = np.append(ind1[0], ind2[0])
+                        #print(i_cl, B.shape)
+                        X = -y_bin.reshape(-1)[np.newaxis, :]*B[:, ind]
+                        y_pred = np.sign(X.dot(model[i_cl][0]))
+                        votes[np.where(y_pred==1)[0], y_i] += 1
+                        votes[np.where(y_pred==-1)[0], y_iplus] += 1
+                        i_cl += 1
+            return y_uniq[np.argmax(votes, axis=1)]
         else: pass
     else: pass
 
